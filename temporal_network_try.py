@@ -19,7 +19,8 @@ from pathlib import Path
 import networkx as nx
 from numba import jit
 
-"""**Tentative code for rnc2 temporal network**
+"""
+**Tentative code for rnc2 temporal network**
 
 * the idea is to set a maximaly connected network from the start
 * the network is an adjacency list where we add a third column as a "contact time" list
@@ -28,22 +29,21 @@ from numba import jit
 
 ** Test with FFE edge list **
 
-
----
 """
 
 #%%
-data_folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2/")
-path = '/content/drive/My Drive/05_Sync/FFE/FireNetwork/00_input'
-path_output = '/content/drive/My Drive/05_Sync/FFE/FireNetwork/00_output'
+data_folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2/data/")
 
-EDGES = pd.read_parquet(os.path.join(path_output, 'dask_edge_list', 'edge_data.parquet'), engine='pyarrow')
+edge_data = data_folder / 'Copy of edge_data.parquet'
+wind_data = data_folder / 'Copy of GD_wind.csv '
+
+EDGES = pd.read_parquet(edge_data, engine='pyarrow')
 
 #%%
 # wind scenario
 def wind_scenario(file_name):
     # wind scenario conditions
-    wind_data = pd.read_csv(os.path.join(path, file_name))
+    wind_data = pd.read_csv(wind_data)
     i = np.random.randint(0, wind_data.shape[0])
     w = wind_data.iloc[i, 2]
     d = wind_data.iloc[i, 1]
