@@ -31,27 +31,27 @@ edges = pd.read_parquet(edge, engine='pyarrow')
 
 #%%
 
-# wind characteristics (wind_bearing_max, wind_bearing_min, distance)
+
 @jit
-def wind_scenario(file_name):
+def wind_scenario(file_name): # wind characteristics, bearing and distance
     # wind scenario conditions
     wind_data = pd.read_csv(file_name)
     i = np.random.randint(0, wind_data.shape[0])
     w = wind_data.iloc[i, 2]
-    wind_distance = wind_data.iloc[i, 1]
+    dist = wind_data.iloc[i, 1]
     b = wind_data.iloc[i, 3]
-    wind_bearing_max = b + 45 # wind direction
-    wind_bearing_min = b - 45
+    bear_max = b + 45 # wind direction
+    bear_min = b - 45
     if b == 360:
-        wind_bearing_max = 45
+        bear_max = 45
     if b <= 0:  # should not be necessary
-        wind_bearing_min = 0
+        bear_min = 0
     if b == 999:
-        wind_bearing_max = 999
-        wind_bearing_min = 0
-    return wind_bearing_max, wind_bearing_min, wind_distance
+        bear_max = 999
+        bear_min = 0
+    return bear_max, bear_min, wind_distance
     
-    return wind_bearing_max, wind_bearing_min, d
+    return bear_max, bear_min, dist
 
 
 def display_network(edge_list_dataframe): # display edge list as network
@@ -84,7 +84,8 @@ def filter_edgelist(e, contact_array): # new edges list at time
     return e.values[contacts[:, time] == True]
 
 @jit
-def main(e):
-    
+def main(e, n_scenario):
+    for scenario in range(n_scenario):
+        wind_b
     
     
