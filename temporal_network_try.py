@@ -70,7 +70,8 @@ def display_network(edge_list_dataframe):
     return graph
 #%%
 # create contact array on the same index as edge list
-contacts = np.full((edges.values.shape[0],1), True)
+def create_contact_array():
+    return np.full((edges.values.shape[0],1), True)
 
 # conditions
 rng = np.random.uniform(0, 1, size=edges.values.shape[0])
