@@ -38,7 +38,8 @@ wind = data_folder / 'Copy of GD_wind.csv '
 edges = pd.read_parquet(edge, engine='pyarrow')
 
 #%%
-# wind scenario
+
+# wind characteristics (wind_bearing_max, wind_bearing_min, distance)
 def wind_scenario(file_name):
     # wind scenario conditions
     wind_data = pd.read_csv(wind)
@@ -59,10 +60,30 @@ def wind_scenario(file_name):
     
     return wind_bearing_max, wind_bearing_min, d
 
-
+# display edge list as network
+def display_network(edge_list_dataframe):
+    graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
+    options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+               'with_labels': False, 'font_weight': 'bold'}
+    nx.draw_kamada_kawai(graph, **options)
+    plt.show()
+    return graph
 #%%
 # create contact array on the same index as edge list
-contacts = np.zeros((1,len(edges)))
+contacts = np.zeros((edges.values.shape[0],1))
 
-# 
-                    
+# Set initial conditions and active edges at t = 0
+def initial_edges_activation(edges):
+    # random value for each edges
+    rng = np.random.uniform(0, 1, size=edges.values.shape[0])
+    # updating contacts at t=1 by comparing probability with RNG for each of the edges
+    initiated_edges = np.where(rng < edges.IgnProb_bl.values)
+    boolean = rng < edges.IgnProb_bl.values
+    # column t=1 based on the initiated edges, 0 = inactive, 1 = active
+    contacts = np.c_[contacts, np.zeros(contacts.shape[0])]
+    
+    edges = edges[boolean]
+    
+    
+    
+    
