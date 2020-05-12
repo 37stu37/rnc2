@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import sys
 import os
+from pathlib import Path
 import networkx as nx
 from numba import jit
 
@@ -32,10 +33,10 @@ from numba import jit
 """
 
 #%%
+data_folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2/")
 path = '/content/drive/My Drive/05_Sync/FFE/FireNetwork/00_input'
 path_output = '/content/drive/My Drive/05_Sync/FFE/FireNetwork/00_output'
-# with open(r'/content/drive/My Drive/05_Sync/FFE/FireNetwork/00_output/dask_edge_list/edge_data.parquet', 'rb') as f:
-#     edges = pd.read_parquet(f, engine='pyarrow')
+
 EDGES = pd.read_parquet(os.path.join(path_output, 'dask_edge_list', 'edge_data.parquet'), engine='pyarrow')
 
 #%%
