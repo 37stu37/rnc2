@@ -40,12 +40,13 @@ edges = pd.read_parquet(edge, engine='pyarrow')
 #%%
 
 # wind characteristics (wind_bearing_max, wind_bearing_min, distance)
+@jit
 def wind_scenario(file_name):
     # wind scenario conditions
     wind_data = pd.read_csv(file_name)
     i = np.random.randint(0, wind_data.shape[0])
     w = wind_data.iloc[i, 2]
-    d = wind_data.iloc[i, 1]
+    distance = wind_data.iloc[i, 1]
     b = wind_data.iloc[i, 3]
     # wind direction
     wind_bearing_max = b + 45
@@ -57,6 +58,7 @@ def wind_scenario(file_name):
     if b == 999:
         wind_bearing_max = 999
         wind_bearing_min = 0
+    return wind_bearing_max, wind_bearing_min, distance
     
     return wind_bearing_max, wind_bearing_min, d
 
@@ -68,23 +70,28 @@ def display_network(edge_list_dataframe):
     nx.draw_kamada_kawai(graph, **options)
     plt.show()
     return graph
-#%%
+
 # create contact array on the same index as edge list
-def create_contact_array():
-    return np.full((edges.values.shape[0],1), True)
+@jit
+def create_contact_array(e):
+    return np.full((e.values.shape[0],1), True)
 
-# conditions
-rng = np.random.uniform(0, 1, size=edges.values.shape[0])
+# conditions, return a boolean
+@jit
+def initial_conditions(e):
+    rng = np.random.uniform(0, 1, size=e.values.shape[0])
+    boolean = rng < e.IgnProb_bl.values
 
-# boolean from condition(s)
-boolean = rng < edges.IgnProb_bl.values
 
 # update a new contact time column (for time = 1 here)
-time = 1
-contacts = np.c_[contacts, boolean]
-
+@jit
+def update_contacts(contact_array, boolean_array):
+    return np.c_[contact_array, boolean_array]
+    
 # new edges list at time
-edges_time = edges.values[contacts[:, time] == True]
+@jit
+def filter_edgelist(e, contact_array):
+    return e.values[contacts[:, time] == True]
 
     
     
