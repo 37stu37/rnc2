@@ -64,21 +64,21 @@ def display_network(edge_list_dataframe): # display edge list as network
 
 
 @jit
-def create_contact_array(e): # create contact array on the same index as edge list
-    return np.full((e.values.shape[0],1), True)
+def create_contact_array(edgelist): # create contact array on the same index as edge list
+    return np.full((edgelist.values.shape[0],1), True)
 
 
 @jit
-def initial_conditions(e): # conditions, return a boolean
-    rng = np.random.uniform(0, 1, size=e.values.shape[0])
-    boolean = rng < e.IgnProb_bl.values
+def initial_conditions(edgelist): # conditions, return a boolean
+    rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
+    boolean = rng < edgelist.IgnProb_bl.values
     return boolean
 
 @jit
-def propagation_conditions(e, c, bear_max, bear_min, dist): # conditions, return a boolean
-    boolean1 = (e.distance.values < dist) 
-    boolean2 = (e.bearing < bear_max) and (e.bearing > bear_min)
-    boolean3 = np.any(c == True, axis=1) # columns where any elements are True ~ is it already burnt ?
+def propagation_conditions(edgelist, contact_array, bear_max, bear_min, dist): # conditions, return a boolean
+    boolean1 = (edgelist.distance.values < dist) 
+    boolean2 = (edgelist.bearing < bear_max) and (edgelist.bearing > bear_min)
+    boolean3 = np.any(contact_array == True, axis=1) # columns where any elements are True ~ is it already burnt ?
     # create boolean mask for all conditions
     return boolean1 & boolean2 & boolean3
     
@@ -89,8 +89,8 @@ def update_contacts(contact_array, boolean_array): # update a new contact time c
     
 
 @jit
-def filter_edgelist(e, contact_array): # new edges list at time
-    return e.values[contacts[:, time] == True]
+def filter_edgelist_at_time(edgelist, contact_array, time): # new edges list at time
+    return edgelist.values[contact_array[:, time] == True]
 
 @jit
 def main(e, n_scenario):
