@@ -75,17 +75,13 @@ def initial_conditions(e): # conditions, return a boolean
     return boolean
 
 @jit
-def propagation_conditions(e, bear_max, bear_min, dist):
+def propagation_conditions(e, c, bear_max, bear_min, dist): # conditions, return a boolean
     boolean1 = (e.distance.values < dist) 
     boolean2 = (e.bearing < bear_max) and (e.bearing > bear_min)
-    boolean3 = contact == True # to be updated !!!
-    # boolean3 = np.all(contact == True, axis=1))
-    # wind speed -> neighbors selection from wind buffer
-    new_fires = fires[fires.distance < fires.wind_distance]
-    # wind direction
-    new_fires = new_fires[(new_fires.bearing < new_fires.wind_bearing_max) & (new_fires.bearing < new_fires.wind_bearing_min)]
-    # should not be already burnt
-    new_fires = new_fires[~new_fires.target.isin(burn)]
+    boolean3 = np.any(c == True, axis=1) # columns where any elements are True ~ is it already burnt ?
+    # create boolean mask for all conditions
+    return boolean1 & boolean2 & boolean3
+    
 
 @jit
 def update_contacts(contact_array, boolean_array): # update a new contact time column
