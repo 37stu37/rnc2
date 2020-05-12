@@ -78,8 +78,8 @@ def initial_conditions(e): # conditions, return a boolean
 def propagation_conditions(e, bear_max, bear_min, dist):
     boolean1 = (e.distance.values < dist) 
     boolean2 = (e.bearing < bear_max) and (e.bearing > bear_min)
-    boolean3 = contact[:,-1] # to be updated !!!
-    boolean3 = np.all(contact == True, axis=1))
+    boolean3 = contact == True # to be updated !!!
+    # boolean3 = np.all(contact == True, axis=1))
     # wind speed -> neighbors selection from wind buffer
     new_fires = fires[fires.distance < fires.wind_distance]
     # wind direction
