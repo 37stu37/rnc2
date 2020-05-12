@@ -72,7 +72,19 @@ def create_contact_array(e): # create contact array on the same index as edge li
 def initial_conditions(e): # conditions, return a boolean
     rng = np.random.uniform(0, 1, size=e.values.shape[0])
     boolean = rng < e.IgnProb_bl.values
+    return boolean
 
+@jit
+def propagation_conditions(e, bear_max, bear_min, dist):
+    boolean1 = (e.distance.values < dist) 
+    boolean2 = (e.bearing < bear_max) and (e.bearing > bear_min)
+    boolean3 = contact[:,-1] # to be updated !!!
+    # wind speed -> neighbors selection from wind buffer
+    new_fires = fires[fires.distance < fires.wind_distance]
+    # wind direction
+    new_fires = new_fires[(new_fires.bearing < new_fires.wind_bearing_max) & (new_fires.bearing < new_fires.wind_bearing_min)]
+    # should not be already burnt
+    new_fires = new_fires[~new_fires.target.isin(burn)]
 
 @jit
 def update_contacts(contact_array, boolean_array): # update a new contact time column
@@ -86,6 +98,10 @@ def filter_edgelist(e, contact_array): # new edges list at time
 @jit
 def main(e, n_scenario):
     for scenario in range(n_scenario):
-        wind_b
+        contact_array = create_contact_array(edges)
+        wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind)
+        ignition_bool = initial_conditions(edges)
+        contact_array = update_contacts(contact_array, ignition_bool)
+        
     
     
