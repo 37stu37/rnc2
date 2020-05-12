@@ -30,7 +30,7 @@ from numba import jit
 """
 
 #%%
-data_folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2/data/")
+data_folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2/data")
 
 edge = data_folder / 'Copy of edge_data.parquet'
 wind = data_folder / 'Copy of GD_wind.csv '
@@ -42,7 +42,7 @@ edges = pd.read_parquet(edge, engine='pyarrow')
 # wind characteristics (wind_bearing_max, wind_bearing_min, distance)
 def wind_scenario(file_name):
     # wind scenario conditions
-    wind_data = pd.read_csv(wind)
+    wind_data = pd.read_csv(file_name)
     i = np.random.randint(0, wind_data.shape[0])
     w = wind_data.iloc[i, 2]
     d = wind_data.iloc[i, 1]
@@ -70,20 +70,21 @@ def display_network(edge_list_dataframe):
     return graph
 #%%
 # create contact array on the same index as edge list
-contacts = np.zeros((edges.values.shape[0],1))
+contacts = np.full((edges.values.shape[0],1), True)
 
-# Set initial conditions and active edges at t = 0
-def initial_edges_activation(edges):
-    # random value for each edges
-    rng = np.random.uniform(0, 1, size=edges.values.shape[0])
-    # updating contacts at t=1 by comparing probability with RNG for each of the edges
-    initiated_edges = np.where(rng < edges.IgnProb_bl.values)
-    boolean = rng < edges.IgnProb_bl.values
-    # column t=1 based on the initiated edges, 0 = inactive, 1 = active
-    contacts = np.c_[contacts, np.zeros(contacts.shape[0])]
-    
-    edges = edges[boolean]
-    
+# conditions
+rng = np.random.uniform(0, 1, size=edges.values.shape[0])
+
+# boolean from condition(s)
+boolean = rng < edges.IgnProb_bl.values
+
+# update a new contact time column (for time = 1 here)
+time = 1
+contacts = np.c_[contacts, boolean]
+
+# new edges list at time
+edges_time = edges.values[contacts[:, time] == True]
+
     
     
     
