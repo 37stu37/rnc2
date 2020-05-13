@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+import dask
 import sys
 import os
 from pathlib import Path
@@ -72,8 +73,8 @@ def initial_conditions(edgelist):
 @jit(nopython=True, parallel=True)
 def propagation_conditions(edgelist, contact_array, bear_max, 
                            bear_min, dist):
-    boolean1 = (edgelist.distance.values < dist) 
-    boolean2 = (edgelist.bearing < bear_max) and (edgelist.bearing > bear_min)
+    boolean1 = (edgelist.distance.values < dist)  # compare with distance between building
+    boolean2 = (edgelist.bearing.values < bear_max) and (edgelist.bearing.values > bear_min)  # compare with bearig between buildings
     boolean3 = np.any(contact_array == True, axis=1) # columns where any elements are True ~ is it already burnt ?
     return boolean1 & boolean2 & boolean3# create boolean mask for all conditions
     return boolean1 & boolean2 & boolean3
@@ -90,17 +91,31 @@ def filter_edgelist_at_time(edgelist, contact_array, time): # new edges list at 
     return edgelist.values[contact_array[:, time] == True]
 
 
+#%%
 @jit(nopython=True, parallel=True)
 def main(e, n_scenario):
+    list_of_fires = []
     for scenario in range(n_scenario):
+        # initial conditions
         time = 0
         wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind) # wind conditions
-        contact_array = create_contact_array(edges)  # create contact array
-        ignition_bool = initial_conditions(edges)  # set ignition conditions
-        contact_array = update_contacts(contact_array, ignition_bool)  # set edgelist based on ignition condtions mask
-        while (True in contact_array[:, -1]):
+        ignition_bool = initial_conditions(edges)  # ignition conditions
+        # keep track of active edges
+        contacts = create_contact_array(edges)  # create contact array
+        contacts[:, 0] == ignition_bool  # just for time = 0
+        # active edgelist
+        fires = filter_edgelist_at_time(edges, contacts, time)
+        list_of_fires.append(fires)
+        while (True in contacts[:, -1]):  # start time stepping
             time += 1
+            propagation_bool = propagation_conditions(fires, contacts, 
+                                                      wind_bearing_max, 
+                                                      wind_bearing_min, 
+                                                      wind_distance)
+            contacts = update_contacts(contacts, propagation_bool)
+            fires = filter_edgelist_at_time(edges,contacts, time)
+            list_of_fires.append(fires)
+        else:
+            da.concatenate(data, axis=1)
             
-        
-    
     
