@@ -26,7 +26,6 @@ from dask.distributed import Client
 client = Client(n_workers=1, threads_per_worker=4, processes=False, memory_limit='6GB')
 
 
-#%%
 folder = "/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2"
 
 edge_file = os.path.join(folder,'data','Copy of edge_data.parquet')
@@ -34,7 +33,6 @@ wind_file = os.path.join(folder,'data','Copy of GD_wind.csv')
 
 edges = pd.read_parquet(edge_file, engine='pyarrow')
 
-#%%
 def wind_scenario(file_name): 
     wind_data = pd.read_csv(file_name) 
     i = np.random.randint(0, wind_data.shape[0])
@@ -53,15 +51,14 @@ def wind_scenario(file_name):
     return bear_max, bear_min, dist # wind characteristics, bearing and distance
 
 
-def conditions_at_time(time_integer, edgelist, contact_matrix, 
-                      wind_direction_max, wind_direction_min,
-                      wind_distance):
+def conditions_at_time(time_integer, edgelist, contact_matrix, wind_direction_max, wind_direction_min, wind_distance):
     if time_integer == 0:  # set initial conditions
         rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
         mask = rng < edges.IgnProb_bl.values
         return mask    
     else:
         # source -> target
+
         boolean0 = (edgelist[:,0]) == (edgelist[contact_matrix[:,-1] == True][:,1])
         # wind direction
         boolean1 = (edgelist[:,3] < wind_direction_max) & (edgelist[:,3] > wind_direction_min)
@@ -98,7 +95,6 @@ def main(edgelist, n_scenarios):
         else:
             da_scenario = da.concatenate(list_of_activation, axis=1)
         dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl'])
-        dd_scenario.to_parquet(os.path.join(folder, 'output', 'scenario_'+scenario+'.parquet', engine='pyarrow'))
+        dd_scenario.to_parquet(os.path.join(folder, 'output', 'scenario_{}.parquet'.format(scenario)))
 
-
- main(edges, 10)
+main(edges, 10)
