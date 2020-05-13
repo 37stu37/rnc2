@@ -62,19 +62,33 @@ def conditions_at_time(time_integer, edgelist, contact_matrix,
         return mask    
     else:
         # source -> target
-        boolean0 = edgelist[:,0] == (edgelist[contact_matrix[:,-1] == True][:,1])]
+        boolean0 = (edgelist[:,0]) == (edgelist[contact_matrix[:,-1] == True][:,1])
         # wind direction
         boolean1 = (edgelist[:,3] < wind_direction_max) & (edgelist[:,3] > wind_direction_min)
         # wind distance
         boolean2 = edgelist[:,2] < wind_distance
         # already burnt
-        boolean3 = np.any(contact_array[:, :-1] == True, axis=1)
+        boolean3 = np.any(contact_matrix[:, :-1] == True, axis=1)
         # create mask
         mask = boolean1 & boolean2 & boolean3
         return mask
 
 
-def valid_edges_at_time(time, edgelist, contact_matrix):
+def valid_edges_at_time(time, edgelist, contact_matrix, boolean_array):
+    c = np.c_[contact_matrix, boolean_array]
     e = edgelist[contact_matrix[:, time]]
-    return e
+    return c, e
 
+
+def main(edgelist, n_scenarios):
+    contact_matrix = np.full((edgelist.shape[0],1), True)
+    wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind_file)
+    for scenario in range(n_scenarios):
+        time = 0
+        while (True in contact_matrix[:, -1]):
+            boolean_mask = conditions_at_time(time, edgelist, contact_matrix, 
+                                         wind_bearing_max, wind_bearing_min, 
+                                         wind_distance)
+            contact_matrix, active_edges = valid_edges_at_time(time, edgelist,
+                                                               contact_matrix, boolean_mask)
+            time += 1
