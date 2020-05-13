@@ -15,27 +15,27 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-import dask
+import dask.dataframe as dd
+import dask.array as da
 import sys
 import os
-from pathlib import Path
 import networkx as nx
 from numba import jit
 
 from dask.distributed import Client
 client = Client(n_workers=1, threads_per_worker=4, processes=False, memory_limit='6GB')
-client
+
 
 #%%
-folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2")
+folder = "/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2"
 
-edge = folder / 'data' / 'Copy of edge_data.parquet'
-wind = folder / 'data' / 'Copy of GD_wind.csv '
+edge_data = os.path.join(folder,'data','Copy of edge_data.parquet')
+wind_data = os.path.join(folder,'data','Copy of GD_wind.csv ')
 
-edges = pd.read_parquet(edge, engine='pyarrow')
+edges = pd.read_parquet(edge_data, engine='pyarrow')
 
 #%%
-@jit(nopython=True, parallel=True)
+@jit
 def wind_scenario(file_name): 
     wind_data = pd.read_csv(file_name) 
     i = np.random.randint(0, wind_data.shape[0])
@@ -63,18 +63,18 @@ def display_network(edge_list_dataframe):
     return graph
 
 
-@jit(nopython=True, parallel=True)
-def create_contact_array(edgelist): 
+
+def create_contact_array(edgelist):
     return np.full((edgelist.values.shape[0],1), True) # create contact array on the same index as edge list
 
 
-@jit(nopython=True, parallel=True)
-def initial_conditions(edgelist): 
+
+def initial_conditions(edgelist):
     rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
     return rng < edgelist.IgnProb_bl.values  # conditions, return a boolean
 
 
-@jit(nopython=True, parallel=True)
+
 def propagation_conditions(edgelist, contact_array, bear_max, 
                            bear_min, dist):
     boolean1 = (edgelist.distance.values < dist)  # compare with distance between building
@@ -84,44 +84,41 @@ def propagation_conditions(edgelist, contact_array, bear_max,
     return boolean1 & boolean2 & boolean3
     
 
-@jit(nopython=True, parallel=True)
+
 def update_contacts(contact_array, boolean_array): # update a new contact time column
     return np.c_[contact_array, boolean_array]
-   
 
-@jit(nopython=True, parallel=True)
-
+    
 def filter_edgelist_at_time(edgelist, contact_array, time): # new edges list at time
     return edgelist.values[contact_array[:, time] == True]
 
 
 #%%
-@jit(nopython=True, parallel=True)
-def main(e, n_scenario):
-    list_of_fires = []
-    for scenario in range(n_scenario):
-        # initial conditions
-        time = 0
-        wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind) # wind conditions
-        ignition_bool = initial_conditions(edges)  # ignition conditions
-        # keep track of active edges
-        contacts = create_contact_array(edges)  # create contact array
-        contacts[:, 0] == ignition_bool  # just for time = 0
-        # active edgelist
-        fires = filter_edgelist_at_time(edges, contacts, time)
+n_scenario = 2
+list_of_fires = []
+for scenario in range(n_scenario):
+    # initial conditions
+    time = 0
+    wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind_data) # wind conditions
+    ignition_bool = initial_conditions(edges)  # ignition conditions
+    # keep track of active edges
+    contacts = create_contact_array(edges)  # create contact array
+    contacts[:, 0] == ignition_bool  # just for time = 0
+    # active edgelist
+    fires = filter_edgelist_at_time(edges, contacts, time)
+    list_of_fires.append(fires)
+    while (True in contacts[:, -1]):  # start time stepping
+        time += 1
+        propagation_bool = propagation_conditions(fires, contacts, 
+                                                  wind_bearing_max, 
+                                                  wind_bearing_min, 
+                                                  wind_distance)
+        contacts = update_contacts(contacts, propagation_bool)
+        fires = filter_edgelist_at_time(edges,contacts, time)
         list_of_fires.append(fires)
-        while (True in contacts[:, -1]):  # start time stepping
-            time += 1
-            propagation_bool = propagation_conditions(fires, contacts, 
-                                                      wind_bearing_max, 
-                                                      wind_bearing_min, 
-                                                      wind_distance)
-            contacts = update_contacts(contacts, propagation_bool)
-            fires = filter_edgelist_at_time(edges,contacts, time)
-            list_of_fires.append(fires)
-        else:
-            da_scenario = da.concatenate(data, axis=1)
-        dd_scenario = dd.from_dask_array(da_scenario, columns=[source, target, distance, bearing, IgnProb_bl])
-        dd_scenario.to_parquet(folder / 'output' / 'scenario_'+scenario.parquet', engine='pyarrow')
+    else:
+        da_scenario = da.concatenate(list_of_fires, axis=1)
+    dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl'])
+    dd_scenario.to_parquet(folder / 'output' / 'scenario_'+scenario+'.parquet', engine='pyarrow')
             
     
