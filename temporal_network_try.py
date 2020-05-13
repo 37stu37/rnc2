@@ -22,11 +22,15 @@ from pathlib import Path
 import networkx as nx
 from numba import jit
 
-#%%
-data_folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2/data")
+from dask.distributed import Client
+client = Client(n_workers=1, threads_per_worker=4, processes=False, memory_limit='6GB')
+client
 
-edge = data_folder / 'Copy of edge_data.parquet'
-wind = data_folder / 'Copy of GD_wind.csv '
+#%%
+folder = Path("/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2")
+
+edge = folder / 'data' / 'Copy of edge_data.parquet'
+wind = folder / 'data' / 'Copy of GD_wind.csv '
 
 edges = pd.read_parquet(edge, engine='pyarrow')
 
@@ -116,6 +120,8 @@ def main(e, n_scenario):
             fires = filter_edgelist_at_time(edges,contacts, time)
             list_of_fires.append(fires)
         else:
-            da.concatenate(data, axis=1)
+            da_scenario = da.concatenate(data, axis=1)
+        dd_scenario = dd.from_dask_array(da_scenario, columns=[source, target, distance, bearing, IgnProb_bl])
+        dd_scenario.to_parquet(folder / 'output' / 'scenario_'+scenario.parquet', engine='pyarrow')
             
     
