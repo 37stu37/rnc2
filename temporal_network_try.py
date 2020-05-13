@@ -87,7 +87,7 @@ def main(edgelist, n_scenarios):
     for scenario in range(n_scenarios):
         time = 0
         print('this is scenario : /n', scenario, 'time step : /n', time)
-        while (True in contact_matrix[:, -1]):
+        while True in contact_matrix[:, -1]:
             boolean_mask = conditions_at_time(time, edgelist, contact_matrix, 
                                          wind_bearing_max, wind_bearing_min, 
                                          wind_distance)
@@ -98,4 +98,7 @@ def main(edgelist, n_scenarios):
         else:
             da_scenario = da.concatenate(list_of_fires, axis=1)
         dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl'])
-        dd_scenario.to_parquet(os.path.join(folder,'output','scenario_{}.parquet'.format(scenario), engine='pyarrow')              
+        dd_scenario.to_parquet(os.path.join(folder, 'output', 'scenario_'+scenario+'.parquet', engine='pyarrow')
+
+ #%%
+ main(edges, 10)
