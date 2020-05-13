@@ -96,9 +96,9 @@ def main(edgelist, n_scenarios):
             list_of_activation.append(active_edges)
             time += 1
         else:
-            da_scenario = da.concatenate(list_of_fires, axis=1)
+            da_scenario = da.concatenate(list_of_activation, axis=1)
         dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl'])
-        dd_scenario.to_parquet(os.path.join(folder, 'output', 'scenario_'+scenario+'.parquet', engine='pyarrow')
+        dd_scenario.to_parquet(os.path.join(folder, 'output', 'scenario_'+scenario+'.parquet', engine='pyarrow'))
 
- #%%
+
  main(edges, 10)
