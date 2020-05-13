@@ -35,6 +35,43 @@ wind_data = os.path.join(folder,'data','Copy of GD_wind.csv')
 edges = pd.read_parquet(edge_data, engine='pyarrow')
 
 #%%
+activations = []
+rng = np.random.uniform(0, 1, size=edges.values.shape[0])
+contacts = rng < edges.IgnProb_bl.values  # initial conditions
+active_edges = edges.values[contacts[:,-1] == True]  # active a time
+activations.append(active_edges)  # store activity
+active_edges = edges.values[(edges.values[0]) == (edges.values[contacts[:,-1] == True][1])]  # source -> target
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def wind_scenario(file_name): 
     wind_data = pd.read_csv(file_name) 
     i = np.random.randint(0, wind_data.shape[0])
@@ -53,6 +90,72 @@ def wind_scenario(file_name):
     return bear_max, bear_min, dist # wind characteristics, bearing and distance
 
 
+def display_network(edge_list_dataframe): 
+    graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True) # display edge list as network
+    options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+               'with_labels': False, 'font_weight': 'bold'}
+    nx.draw_kamada_kawai(graph, **options)
+    plt.show()
+    return graph
+
+
+
+def create_contact_array(edgelist):
+    return np.full((edgelist.values.shape[0],1), True) # create contact array on the same index as edge list
+
+
+
+def initial_conditions(edgelist):
+    rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
+    return rng < edgelist.IgnProb_bl.values  # conditions, return a boolean
+
+
+
+def propagation_conditions(edgelist, contact_array, bear_max, 
+                           bear_min, dist):
+    boolean_burnt = contact_array[:,:-1] != True  # not burnt at time-1
+    boolean_burning = contact_array[:,-1] == True  # burning at time
+    
+    
+    boolean0 = contact_array[:,-1] == True # Fire 
+    boolean1 = edgelist[:,2] < dist  # compare with distance between building
+    boolean2 = (edgelist[:,3] < bear_max) & (edgelist[:,3] > bear_min)  # compare with bearig between buildings
+    boolean3 = np.any(contact_array[:, :-1] == True, axis=1) # True at time-1 ~ is it already burnt ?
+    return boolean1 & boolean2 & boolean3# create boolean mask for all conditions
+    
+
+
+def update_contacts(contact_array, boolean_array): # update a new contact time column
+    return np.c_[contact_array, boolean_array]
+
+    
+def filter_edgelist_at_time(edgelist, contact_array, time): # new edges list at time
+    return edgelist.values[contact_array[:, time] == True]
+
+
+#%%
+n_scenario = 2
+list_of_fires = []
+for scenario in range(n_scenario):
+    # initial conditions
+    time = 0
+    wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind_data) # wind conditions
+    ignition_bool = initial_conditions(edges)  # ignition conditions
+    # keep track of active edges
+    contacts = create_contact_array(edges)  # create contact array
+    contacts[:, 0] == ignition_bool  # just for time = 0
+    # active edgelist
+    fires = filter_edgelist_at_time(edges, contacts, time)
+    list_of_fires.append(fires)
+    while (True in contacts[:, -1]):  # start time stepping
+        time += 1
+        propagation_bool = propagation_conditions(fires, contacts, 
+                                                  wind_bearing_max, 
+                                                  wind_bearing_min, 
+                                                  wind_distance)
+        contacts = update_contacts(contacts, propagation_bool)
+        fires = filter_edgelist_at_time(edges,contacts, time)
+        list_of_fires.append(fires)
     else:
         da_scenario = da.concatenate(list_of_fires, axis=1)
     dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl'])
