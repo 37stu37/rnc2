@@ -102,27 +102,32 @@ def condition4(t, e, c):
 ---
 """
 
-for scenario in range(10):
+for scenario in range(1):
   time = 0
   list_of_activation = [] # to record fires
-  contact_matrix = np.full((edgelist.shape[0],1), True) # keep track of contacts in time
-  wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind_file) # wind conditions for each scenarios
-  ignitions = condition0  # initial ignitions
-  contact_matrix[:, time] = ignitions
+  
   while True in contact_matrix[:,-1]:  # while still some fires burning
-      print("scenario : {}".format(scenario))
-      print("time step : {}".format(time))
-      # propagation = condition1(time,edgelist,contact_matrix) &
-      # & condition2(time,edgelist,contact_matrix,wind_bearing_max, wind_bearing_min) \
-      # & condition3(time,edgelist,contact_matrix,wind_distance) \
-      propagation =  condition4(time,edgelist,contact_matrix)  # not already burnt
+        print("scenario : {}".format(scenario))
+        print("time step : {}".format(time))
+        
+        if time = 0:
+              contact_matrix = np.full((edgelist.shape[0],1), True) # keep track of contacts in time
+              wind_bearing_max, wind_bearing_min, wind_distance = wind_scenario(wind_file) # wind conditions for each scenarios
+              ignitions = condition0  # initial ignitions
+              contact_matrix[:, time] = ignitions
+        else:
+              propagation = condition1(time,edgelist,contact_matrix) & \ #target -> source
+                    condition2(time,edgelist,contact_matrix,wind_bearing_max, wind_bearing_min) & \ # wind
+                    condition3(time,edgelist,contact_matrix,wind_distance) & \ # wind distance
+                    condition4(time,edgelist,contact_matrix)  # not already burnt
+                    
       # update contact matrix with new time activation
       contact_matrix = np.c_[contact_matrix, propagation]
       print("fire still burning ? \n {}".format(True in contact_matrix[:, -1]))
       # active edges at time
       active_edges = edgelist.values[contact_matrix[:, time] == True]
-      active_edges = np.c_[active_edges, np.full(active_edges.shape[0], scenario)]
-      active_edges = np.c_[active_edges, np.full(active_edges.shape[0], time)]
+      active_edges['scenario'] = scenario
+      active_edges['time'] = time
       # record acrive edges to list
       list_of_activation.append(active_edges)
       time += 1
