@@ -48,7 +48,7 @@ wind_file = folder / 'data' / 'Copy of GD_wind.csv'
 
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
 
-edgelist.columns
+# %%
 
 """**Conditions**
 
@@ -95,6 +95,7 @@ def condition4(t, e, c):
       # already burnt in previous fires
       return np.any(c[:, :-1] == True, axis=1)
 
+#%%
 """**Main**
 
 
