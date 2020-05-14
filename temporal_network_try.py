@@ -102,7 +102,7 @@ def condition4(t, e, c):
 ---
 """
 
-for scenario in range(2):
+for scenario in range(10):
   time = 0
   list_of_activation = [] # to record fires
   contact_matrix = np.full((edgelist.shape[0],1), True) # keep track of contacts in time
@@ -112,15 +112,16 @@ for scenario in range(2):
   while True in contact_matrix[:,-1]:  # while still some fires burning
       print("scenario : {}".format(scenario))
       print("time step : {}".format(time))
-      propagation = condition1(time,edgelist,contact_matrix) \
-      & condition2(time,edgelist,contact_matrix,wind_bearing_max, wind_bearing_min) \
-      & condition3(time,edgelist,contact_matrix,wind_distance) \
-      & condition4(time,edgelist,contact_matrix)  # not already burnt
+      # propagation = condition1(time,edgelist,contact_matrix) &
+      # & condition2(time,edgelist,contact_matrix,wind_bearing_max, wind_bearing_min) \
+      # & condition3(time,edgelist,contact_matrix,wind_distance) \
+      propagation =  condition4(time,edgelist,contact_matrix)  # not already burnt
       # update contact matrix with new time activation
       contact_matrix = np.c_[contact_matrix, propagation]
       print("fire still burning ? \n {}".format(True in contact_matrix[:, -1]))
       # active edges at time
       active_edges = edgelist.values[contact_matrix[:, time] == True]
+      active_edges = np.c_[active_edges, np.full(active_edges.shape[0], scenario)]
       active_edges = np.c_[active_edges, np.full(active_edges.shape[0], time)]
       # record acrive edges to list
       list_of_activation.append(active_edges)
@@ -129,7 +130,7 @@ for scenario in range(2):
       # record active edges in dask and export to parquet
       da_scenario = da.concatenate(list_of_activation, axis=1)
   # at the end of scenario, save activations to parquet
-  dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl', 'time'])
+  dd_scenario = dd.from_dask_array(da_scenario, columns=['source', 'target', 'distance', 'bearing', 'IgnProb_bl', 'scenario', 'time'])
   dd_scenario['scenario'] = scenario
   dd_scenario.to_parquet(os.path.join(folder / 'output' /'scenario_{}.parquet'.format(scenario)))
 
