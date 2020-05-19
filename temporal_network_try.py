@@ -82,13 +82,10 @@ for scenario in range(n):
         print("scenario : {} time : {}".format(scenario, time))
         
         # propagation mask
-        if time  != 0:
-            maskPreviousTarget = CoTime['time{}'.format(time-1)] == 1
-        else:
-            maskPreviousTarget = CoTime['initial_state'] == 1
+        maskPreviousTarget = CoTime.iloc[:, -1] == 1
         newSource = edgelist.source[maskPreviousTarget]
-        print("shape previousTarget {} and newSource : {}".format(previousTarget.shape, newSource.shape))
-        maskSource = newSource.isin(edgelist) # np.in1d(edgelist, newSource)
+        print("shape previousTarget {} and newSource : {}".format(maskPreviousTarget.shape, newSource.shape))
+        maskSource = np.in1d(edgelist.values, newSource.values) # newSource.isin(edgelist) # 
         print("shape maskSource ; {}".format(maskSource.shape))
         # wind mask
         maskWind = (edgelist.bearing.values < w_bearing_max) & \
@@ -96,9 +93,9 @@ for scenario in range(n):
                 (edgelist.distance.values < w_distance)
         print("shape maskWind ; {}".format(maskWind.shape))
         # burnt mask
-        previouslyActivated = CoTime.drop('time{}'.format(time),
-                                          axis=1).sum(axis=1)
-        maskBurnt = np.where(previouslyActivated> 0, 0, 1) # burnt == 0 ==> False
+        # previouslyActivated = CoTime.drop('time{}'.format(time), axis=1).sum(axis=1)
+        previouslyActivated = CoTime.iloc[:, :-1].sum(axis=1) # all 0 for time == 0, intact
+        maskBurnt = np.where(previouslyActivated> 0, 0, 1) # burnt == 0, intact == 1(mask needed)
         print("shape maskBurnt ; {}".format(maskBurnt.shape))
         # store mask in CoTime matrix
         maskMerge = (maskSource) & (maskWind) & (maskBurnt)
