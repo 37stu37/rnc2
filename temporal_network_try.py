@@ -142,43 +142,6 @@ for scenario in range(n):
         
     # if while loop broken, save activation for the scenario
     Activations = pd.concat(list_of_Activations)
-    Activations.to_parquet(folder / 'output' / 'scenario{}_Activations.parquet'.format(scenario), engine='pyarrow')
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # ignititon and propagation
-        ignition_m = ignition_mask(time, edgelist, CoTime)
-        if time == 0:
-          CoTime.iloc[:,0] = ignition_m * 1
-          print(len(CoTime[CoTime.iloc[:,0] == 1]))
-        # targets under the wind
-        wind_m = wind_mask(edgelist, bear_max, bear_min, distance)
-        # not already burnt
-        not_burnt_m = not_burnt_mask(time, edgelist, CoTime)
-        # resulting mask
-        mask = (ignition_m & wind_m & not_burnt_m)
-        # add mask to CoTime
-        if time > 0:
-          CoTime = pd.DataFrame(np.c_[CoTime, mask*1])
-        # create Active edges
-        ActiveEdges = edgelist[mask]
-        if ActiveEdges.empty:
-            condition = False
-        print("number of active edges : {}".format(len(ActiveEdges)))
-        # add scenario and time to active edges
-        ActiveEdges["scenario"] = scenario
-        ActiveEdges["time"] = time
-        # append to list
-        list_of_Activations.append(ActiveEdges)
-        time += 1
-    Activations = pd.concat(list_of_Activations)
-    Activations.to_parquet(folder / 'output' / 'scenario{}_Activations.parquet'.format(scenario), engine='pyarrow')
+    Activations.to_parquet(folder / 'output' / 
+                           'scenario{}_Activations.parquet'.format(scenario), 
+                           engine='pyarrow')
