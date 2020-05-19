@@ -37,6 +37,7 @@ wind_file = folder / 'data' / 'Copy of GD_wind.csv'
 
 wind_data = pd.read_csv(wind_file) 
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
+
 #%%
 def wind_scenario(t, wind_data):
     if t == 0:
@@ -64,13 +65,16 @@ for scenario in range(n):
     condition = True
     list_of_Activations = []
     time = 0 
+    
     # wind conditions
     w_bearing_max, w_bearing_min, w_distance = wind_scenario(time, wind_data)
+    
     # ignition
     rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
     CoTime = pd.DataFrame ((rng < edgelist.IgnProb_bl.values)*1, 
                            columns=['initial_state'])
     print("number of ignitions : {}".format(len(CoTime[CoTime.initial_state == 1])))
+    
     # add scenario and time to active edges
     print(CoTime.columns)
     ActiveEdges = edgelist[CoTime['initial_state'] == 1]
@@ -82,25 +86,27 @@ for scenario in range(n):
         print("scenario : {} time : {}".format(scenario, time))
         
         # propagation mask
-        maskPreviousTarget = CoTime.iloc[:, -1] == 1
-        newSource = edgelist.source[maskPreviousTarget]
-        print("shape previousTarget {} and newSource : {}".format(maskPreviousTarget.shape, newSource.shape))
-        maskSource = np.in1d(edgelist.values, newSource.values) # newSource.isin(edgelist) # 
-        print("shape maskSource ; {}".format(maskSource.shape))
+        maskPreviousEdge = CoTime.iloc[:, -1] == 1 
+        newSource = edgelist.target[maskPreviousEdge]
+        maskSource = np.in1d(edgelist.source.values, newSource.values)
+        # print("shape maskSource ; {}".format(maskSource.shape))
+        
         # wind mask
         maskWind = (edgelist.bearing.values < w_bearing_max) & \
             (edgelist.bearing.values > w_bearing_min) & \
                 (edgelist.distance.values < w_distance)
-        print("shape maskWind ; {}".format(maskWind.shape))
+        # print("shape maskWind ; {}".format(maskWind.shape))
+        
         # burnt mask
-        # previouslyActivated = CoTime.drop('time{}'.format(time), axis=1).sum(axis=1)
         previouslyActivated = CoTime.iloc[:, :-1].sum(axis=1) # all 0 for time == 0, intact
         maskBurnt = np.where(previouslyActivated> 0, 0, 1) # burnt == 0, intact == 1(mask needed)
-        print("shape maskBurnt ; {}".format(maskBurnt.shape))
+        # print("shape maskBurnt ; {}".format(maskBurnt.shape))
+        
         # store mask in CoTime matrix
         maskMerge = (maskSource) & (maskWind) & (maskBurnt)
         CoTime['time{}'.format(time)] = maskMerge
-        print("shape maskMerge ; {}".format(maskMerge.shape))
+        # print("shape maskMerge ; {}".format(maskMerge.shape))
+        
         # Active edges at this time
         ActiveEdges = edgelist[CoTime['time{}'.format(time)] == 1]
         ActiveEdges["scenario"] = scenario
