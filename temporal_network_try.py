@@ -7,8 +7,8 @@ Original file is located at
     https://colab.research.google.com/github/37stu37/rnc2/blob/master/temporal_network_try.ipynb
 """
 
-from google.colab import drive
-drive.mount('/content/drive')
+# from google.colab import drive
+# drive.mount('/content/drive')
 
 # Commented out IPython magic to ensure Python compatibility.
 # %matplotlib inline
@@ -29,37 +29,16 @@ pd.options.mode.chained_assignment = None  # default='warn'
 client = Client(processes=False)
 client
 
-"""---
-
-
-**Tentative code for rnc2 temporal network**
-
-@time
-
-Conditions -> Boolean mask -> Contacts -> Edgelist
-
-
----
-"""
-
+#%%
 # import data
-folder = Path('/content/drive/My Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2')
+folder = Path('/Users/alex/Google Drive/04_Cloud/01_Work/Academia/01_Publications/00_Alex/005_RNC2')
 edge_file = folder / 'data' / 'Copy of edge_data.parquet'
 wind_file = folder / 'data' / 'Copy of GD_wind.csv'
 
 wind_data = pd.read_csv(wind_file) 
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
 
-"""**Conditions**
-
-
----
-
-**Main**
-
-
----
-"""
+#%%
 
 def wind_scenario(t, wind_data):
     if t == 0:
@@ -110,19 +89,77 @@ def not_burnt_mask(t, e, c):
       mask = mask !=1
     return mask
 
-n=10
+#%%
+n=2
 for scenario in range(n):
+    # initial setup
     condition = True
     list_of_Activations = []
     time = 0 
+    print("scenario : {} time : {}".format(scenario, time))
+    # wind conditions
     bear_max, bear_min, distance = wind_scenario(time, wind_data)
-    CoTime = pd.DataFrame() # CoTime = pd.DataFrame(np.ones((len(edgelist), 1)))
-    while condition = True:
+    # ignition
+    rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
+    CoTime = pd.DataFrame ((rng < edgelist.IgnProb_bl.values)*1, columns=['time{}'.format(time)])
+    print("number of ignitions : {}".format(len(CoTime[CoTime.time0 == 1])))
+    # add scenario and time to active edges
+    ActiveEdges = edgelist[CoTime['time{}'.format(time)] == 1]
+    ActiveEdges["scenario"] = scenario
+    ActiveEdges["time"] = time
+    list_of_Activations.append(ActiveEdges)
+    
+    while condition:
+        time += 1
         print("scenario : {} time : {}".format(scenario, time))
+        # propagation mask
+        previousTarget = CoTime['time{}'.format(time-1)] == 1
+        newSource = ActiveEdges.source[previousTarget]
+        maskSource = np.in1d(edgelist, newSource)
+        # wind mask
+        maskWind = (edgelist.bearing.values < w_bearing_max) &
+        (edgelist.bearing.values > w_bearing_min) & 
+        (edgelist.distance.values < w_distance)
+        # burnt mask
+        previouslyActivated = CoTime.drop('time{}'.format(time),
+                                          axis=1).sum(axis=1)
+        maskBurnt = np.where(previouslyActivated> 0, 0, 1) # burnt == 0 ==> False
+        
+        # store mask in CoTime matrix
+        maskMerge = (maskSource) & (maskWind) & (maskBurnt)
+        CoTime['time{}'.format(time)] = maskMerge
+        
+        # Active edges at this time
+        ActiveEdges = edgelist[CoTime['time{}'.format(time)] == 1]
+        ActiveEdges["scenario"] = scenario
+        ActiveEdges["time"] = time
+        list_of_Activations.append(ActiveEdges)
+        
+        # break while condition if no more fires
+        fires = (CoTime['time{}'.format(time)] == 1).sum(axis=0)
+        condition = fires != 0
+        print("condition {} at time {}".format(condition, time))
+        
+    # if while loop broken, save activation for the scenario
+    Activations = pd.concat(list_of_Activations)
+    Activations.to_parquet(folder / 'output' / 'scenario{}_Activations.parquet'.format(scenario), engine='pyarrow')
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         # ignititon and propagation
         ignition_m = ignition_mask(time, edgelist, CoTime)
         if time == 0:
-          CoTime.iloc[:,0] = mask
+          CoTime.iloc[:,0] = ignition_m * 1
+          print(len(CoTime[CoTime.iloc[:,0] == 1]))
         # targets under the wind
         wind_m = wind_mask(edgelist, bear_max, bear_min, distance)
         # not already burnt
@@ -134,8 +171,8 @@ for scenario in range(n):
           CoTime = pd.DataFrame(np.c_[CoTime, mask*1])
         # create Active edges
         ActiveEdges = edgelist[mask]
-        if ActiveEdges is empty:
-
+        if ActiveEdges.empty:
+            condition = False
         print("number of active edges : {}".format(len(ActiveEdges)))
         # add scenario and time to active edges
         ActiveEdges["scenario"] = scenario
