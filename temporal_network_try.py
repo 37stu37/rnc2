@@ -70,19 +70,19 @@ for scenario in range(n):
     rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
     CoTime = pd.DataFrame ((rng < edgelist.IgnProb_bl.values)*1, 
                            columns=['initial_state'])
-    print("number of ignitions : {}".format(len(CoTime[CoTime.time0 == 1])))
+    print("number of ignitions : {}".format(len(CoTime[CoTime.initial_state == 1])))
     # add scenario and time to active edges
-    ActiveEdges = edgelist[CoTime['time{}'.format(time)] == 1]
+    print(CoTime.columns)
+    ActiveEdges = edgelist[CoTime['initial_state'] == 1]
     ActiveEdges["scenario"] = scenario
     ActiveEdges["time"] = time
     list_of_Activations.append(ActiveEdges)
     
     while condition:
-        # advance time
-        time += 1
         print("scenario : {} time : {}".format(scenario, time))
+        
         # propagation mask
-        if time - 1 = 0:
+        if time  != 0:
             maskPreviousTarget = CoTime['time{}'.format(time-1)] == 1
         else:
             maskPreviousTarget = CoTime['initial_state'] == 1
@@ -114,6 +114,9 @@ for scenario in range(n):
         fires = (CoTime['time{}'.format(time)] == 1).sum(axis=0)
         condition = fires != 0
         print("condition {} at time {}".format(condition, time))
+        
+        # advance time
+        time += 1
         
     # if while loop broken, save activation for the scenario
     Activations = pd.concat(list_of_Activations)
