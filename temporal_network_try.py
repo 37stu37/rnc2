@@ -75,8 +75,6 @@ def mask(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bea
                             l_activated_targets.append(t)
     return l_activated_sources, l_activated_targets
 
-
-    
 #%%
 for scenario in range(n):
     allPreviousActivations = []
@@ -97,4 +95,3 @@ for scenario in range(n):
     if activated_sources.empty:
         condition = False
     while condition:
-
