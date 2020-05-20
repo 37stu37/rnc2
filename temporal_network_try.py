@@ -22,7 +22,8 @@ import pandas as pd
 # import os
 from pathlib import Path
 # import networkx as nx
-# from numba import jit
+from numba import jit
+from numba import njit
 # from dask.distributed import Client
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -41,9 +42,9 @@ wind_file = folder / 'data' / 'Copy of GD_wind.csv'
 
 wind_data = pd.read_csv(wind_file) 
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
+
 #%%
-# %%timeit
-def wind_scenario(t, wind_data):
+def wind_scenario(wind_data):
     i = np.random.randint(0, wind_data.values.shape[0])
     w = wind_data.values[i, 2]
     dist = wind_data.values[i, 1]
@@ -59,59 +60,72 @@ def wind_scenario(t, wind_data):
         bear_min = 0
     return bear_max, bear_min, dist # wind characteristics, bearing and distance
 
-#%%
+
+def Active_Edges(mask,s,t,edges=edgelist):
+    ActiveEdges = edgelist[mask]
+    ActiveEdges["scenario"] = s
+    ActiveEdges["time"] = t
+    return ActiveEdges
+
+
+def mask_ignition(edges=edgelist):
+    rng = np.random.uniform(0, 1, size=edges.values.shape[0])
+    return (rng < edgelist.IgnProb_bl.values)*1
+
+
+def mask_propagation(mask,edges=edgelist):
+    previousTarget = edgelist.target[mask]
+    return np.in1d(edgelist.source.values, previousTarget.values)
+
+
+def mask_wind(w_b_max, w_b_min, w_dist):
+    return (edgelist.bearing.values < w_b_max) & (edgelist.bearing.values > w_b_min) & (edgelist.distance.values < w_dist)
+
+
+def mask_previously_activated(time_matrix):
+    previouslyActivated = time_matrix.iloc[:, :-1].sum(axis=1)
+    return np.where(previouslyActivated> 0, 0, 1) # previouslyActivated > 0 means Yes, activated and the result of the mask is 0 or False !
+
+
+def mask_prior_activation(time_matrix):
+    return time_matrix.iloc[:, -1] == 1
+
 # %%timeit
 def main(n, edgelist=edgelist):
     for scenario in range(n):
         # initial setup
         condition = True
         list_of_Activations = []
-        time = 0 
+        time = 0
         # wind conditions
-        w_bearing_max, w_bearing_min, w_distance = wind_scenario(time, wind_data)
+        w_bearing_max, w_bearing_min, w_distance = wind_scenario(wind_data)
         # ignition
-        rng = np.random.uniform(0, 1, size=edgelist.values.shape[0])
-        CoTime = pd.DataFrame ((rng < edgelist.IgnProb_bl.values)*1, 
-                               columns=['initial_state'])
+        maskIgnition = mask_ignition()
+        CoTime = pd.DataFrame (maskIgnition, columns=['initial_state'])
         print("number of ignitions : {}".format(len(CoTime[CoTime.initial_state == 1])))
         # add scenario and time to active edges
-        print(CoTime.columns)
-        ActiveEdges = edgelist[CoTime['initial_state'] == 1]
-        ActiveEdges["scenario"] = scenario
-        ActiveEdges["time"] = time
+        ActiveEdges = Active_Edges(CoTime['initial_state'] == 1, scenario, time)
         list_of_Activations.append(ActiveEdges)
         
         while condition:
             print("scenario : {} time : {}".format(scenario, time))
             
             # propagation mask
-            maskPreviousEdge = CoTime.iloc[:, -1] == 1 
-            previousTarget = edgelist.target[maskPreviousEdge]
-            # print("shape previousTarget {} shape newSource : {} shape edgelist : {}".format(maskPreviousTarget.shape, newSource.shape, edgelist.shape))
-            # maskSource = edgelist.source.isin(previousTarget)
-            maskSource = np.in1d(edgelist.source.values, previousTarget.values)
-            print("shape maskSource ; {}".format(maskSource.shape))
+            maskPreviousEdge = mask_prior_activation(CoTime)
+            maskSource = mask_propagation(maskPreviousEdge)
             
             # wind mask
-            maskWind = (edgelist.bearing.values < w_bearing_max) & \
-                (edgelist.bearing.values > w_bearing_min) & \
-                    (edgelist.distance.values < w_distance)
-            # print("shape maskWind ; {}".format(maskWind.shape))
+            maskWind = mask_wind(w_bearing_max, w_bearing_min, w_distance)
             
             # burnt mask
-            previouslyActivated = CoTime.iloc[:, :-1].sum(axis=1) # all 0 for time == 0, intact
-            maskBurnt = np.where(previouslyActivated> 0, 0, 1) # burnt == 0, intact == 1(mask needed)
-            # print("shape maskBurnt ; {}".format(maskBurnt.shape))
+            maskBurnt = mask_previously_activated(CoTime)
             
             # store mask in CoTime matrix
             maskMerge = (maskSource) & (maskWind) & (maskBurnt)
             CoTime['time{}'.format(time)] = maskMerge
-            # print("shape maskMerge ; {}".format(maskMerge.shape))
             
             # Active edges at this time
-            ActiveEdges = edgelist[CoTime['time{}'.format(time)] == 1]
-            ActiveEdges["scenario"] = scenario
-            ActiveEdges["time"] = time
+            ActiveEdges = Active_Edges(CoTime['time{}'.format(time)] == 1, scenario, time)
             list_of_Activations.append(ActiveEdges)
             
             # break while condition if no more fires
@@ -128,5 +142,4 @@ def main(n, edgelist=edgelist):
         
 #%%
 %%time
-main(2)
-
+main(1)
