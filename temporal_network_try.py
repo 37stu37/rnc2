@@ -131,7 +131,6 @@ def main(n, edgelist=edgelist):
             # break while condition if no more fires
             fires = (CoTime['time{}'.format(time)] == 1).sum(axis=0)
             condition = fires != 0
-            print("condition {} at time {}".format(condition, time))
             
             # advance time
             time += 1
