@@ -61,18 +61,21 @@ def propagation(previouslyActivatedTargets, d_sources, d_targets):
     return l_newSources, l_newTargets
                 
 
-def mask(d_rawSources, d_rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bearing_min, d_w_distance, d_sources, d_targets, d_allPreviousActivations):
+def mask(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bearing_min, d_w_distance, d_sources, d_targets, d_allPreviousActivations):
     l_activated_sources = []
     l_activated_targets = []
-    for idx_s, s in enumerate(d_rawSources):
-        t = d_targets[idx_s]
-        if (s in d_sources) & (t in d_targets):
-            if (bearing[idx_s] < d_w_bearing_max) & (bearing[idx_s] > d_w_bearing_min):
-                if distance[idx_s] < d_w_distance:
-                    if s in d_allPreviousActivations:
-                        l_activated_sources.append(d_rawSources[idx_p])
-                        l_activated_targets.append(d_rawTargets[idx_p])
+    for idx_s, s in enumerate(rawSources):
+        t = rawTargets[idx_s]
+        for d_s, d_t in zip(d_sources, d_targets):
+            if (s == d_s) & (t == d_t):
+                if (bearing[idx_s] < d_w_bearing_max) & (bearing[idx_s] > d_w_bearing_min):
+                    if distance[idx_s] < d_w_distance:
+                        if s in d_allPreviousActivations:
+                            l_activated_sources.append(s)
+                            l_activated_targets.append(t)
     return l_activated_sources, l_activated_targets
+
+
     
 #%%
 for scenario in range(n):
