@@ -44,6 +44,7 @@ wind_data = pd.read_csv(wind_file)
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
 
 #%%
+
 def wind_scenario(wind_data):
     i = np.random.randint(0, wind_data.values.shape[0])
     w = wind_data.values[i, 2]
@@ -67,28 +68,27 @@ def Active_Edges(mask,s,t,edges=edgelist):
     ActiveEdges["time"] = t
     return ActiveEdges
 
+@njit
+def mask_ignition(edgesProba=edgelist.IgnProb_bl.values):
+    rng = np.random.uniform(0, 1, size=edgesProba.shape[0])
+    return (rng < edgesProba)*1
 
-def mask_ignition(edges=edgelist):
-    rng = np.random.uniform(0, 1, size=edges.values.shape[0])
-    return (rng < edgelist.IgnProb_bl.values)*1
+def mask_propagation(mask,edges_target=edgelist.target.values,edges_source=edgelist.source.values):
+    previousTarget = edges_target[mask]
+    return np.in1d(edges_source, previousTarget)
 
+@njit
+def mask_wind(w_b_max, w_b_min, w_dist, edges_bearing=edgelist.bearing.values, edges_distance=edgelist.distance.values):
+    return (edges_bearing < w_b_max) & (edges_bearing > w_b_min) & (edges_distance < w_dist)
 
-def mask_propagation(mask,edges=edgelist):
-    previousTarget = edgelist.target[mask]
-    return np.in1d(edgelist.source.values, previousTarget.values)
-
-
-def mask_wind(w_b_max, w_b_min, w_dist):
-    return (edgelist.bearing.values < w_b_max) & (edgelist.bearing.values > w_b_min) & (edgelist.distance.values < w_dist)
-
-
+@njit
 def mask_previously_activated(time_matrix):
-    previouslyActivated = time_matrix.iloc[:, :-1].sum(axis=1)
+    previouslyActivated = np.sum(time_matrix[:, :-1], axis=1)
     return np.where(previouslyActivated> 0, 0, 1) # previouslyActivated > 0 means Yes, activated and the result of the mask is 0 or False !
 
-
+@njit
 def mask_prior_activation(time_matrix):
-    return time_matrix.iloc[:, -1] == 1
+    return time_matrix[:, -1] == 1
 
 # %%timeit
 def main(n, edgelist=edgelist):
@@ -106,19 +106,21 @@ def main(n, edgelist=edgelist):
         # add scenario and time to active edges
         ActiveEdges = Active_Edges(CoTime['initial_state'] == 1, scenario, time)
         list_of_Activations.append(ActiveEdges)
+        if ActiveEdges.empty:
+            continue
         
         while condition:
             print("scenario : {} time : {}".format(scenario, time))
             
             # propagation mask
-            maskPreviousEdge = mask_prior_activation(CoTime)
+            maskPreviousEdge = mask_prior_activation(CoTime.values)
             maskSource = mask_propagation(maskPreviousEdge)
             
             # wind mask
             maskWind = mask_wind(w_bearing_max, w_bearing_min, w_distance)
             
             # burnt mask
-            maskBurnt = mask_previously_activated(CoTime)
+            maskBurnt = mask_previously_activated(CoTime.values)
             
             # store mask in CoTime matrix
             maskMerge = (maskSource) & (maskWind) & (maskBurnt)
@@ -126,6 +128,8 @@ def main(n, edgelist=edgelist):
             
             # Active edges at this time
             ActiveEdges = Active_Edges(CoTime['time{}'.format(time)] == 1, scenario, time)
+            if ActiveEdges.empty:
+                break
             list_of_Activations.append(ActiveEdges)
             
             # break while condition if no more fires
