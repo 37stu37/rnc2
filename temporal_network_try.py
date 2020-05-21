@@ -43,48 +43,58 @@ def wind_scenario(wind_data):
 def ignition(d_probability, d_rng, d_rawSources, d_rawTargets):
     l_activated_sources = []
     l_activated_targets = []
-    for idx_p, p in enumerate(d_probabilitiy):
-        if p > d_rng[idx_p]:
+    for idx_p, p in enumerate(d_probability):
+        if p < d_rng[idx_p]:
             l_activated_sources.append(d_rawSources[idx_p])
             l_activated_targets.append(d_rawTargets[idx_p])
     return l_activated_sources, l_activated_targets
 
 
-def propagation(previouslyActivatedTargets, d_sources, d_targets):
+def propagation(act_targets, rawSources, rawTargets):
     l_newSources = []
     l_newTargets = []
-    for idx_s, s in enumerate(d_sources):
-        for idx_trgt_prev, trgt_prev in enumerate(previouslyActivatedTargets):
+    for idx_s, s in enumerate(rawSources):
+        for idx_trgt_prev, trgt_prev in enumerate(act_targets):
             if s == trgt_prev:
                 l_newSources.append(s)
-                l_newTargets.append(d_targets[idx_s])
+                l_newTargets.append(rawTargets[idx_s])
     return l_newSources, l_newTargets
                 
 
-def mask(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bearing_min, d_w_distance, d_sources, d_targets, d_allPreviousActivations):
-    l_activated_sources = []
-    l_activated_targets = []
-    for idx_s, s in enumerate(rawSources):
-        t = rawTargets[idx_s]
-        for d_s, d_t in zip(d_sources, d_targets):
-            if (s == d_s) & (t == d_t):
-                if (bearing[idx_s] < d_w_bearing_max) & (bearing[idx_s] > d_w_bearing_min):
-                    if distance[idx_s] < d_w_distance:
-                        if s in d_allPreviousActivations:
-                            l_activated_sources.append(s)
-                            l_activated_targets.append(t)
-    return l_activated_sources, l_activated_targets
+def valid_edges(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bearing_min, d_w_distance, act_sources, act_targets, d_allPreviousActivations):
+    if d_allPreviousActivations.empty:
+        return act_sources, act_targets
+    else:
+        l_activated_sources = []
+        l_activated_targets = []
+        for idx_s, s in enumerate(rawSources):
+            t = rawTargets[idx_s]
+            for d_s, d_t in zip(act_sources, act_targets):
+                if (s == d_s) & (t == d_t):
+                    if (bearing[idx_s] < d_w_bearing_max) & (bearing[idx_s] > d_w_bearing_min):
+                        if distance[idx_s] < d_w_distance:
+                            if s not in d_allPreviousActivations:
+                                l_activated_sources.append(s)
+                                l_activated_targets.append(t)
+        return l_activated_sources, l_activated_targets
 
+
+def lists_to_arrays(list1, list2, scenario, time):
+    list_scenario = [scenario] * len(list1)
+    list_time = [time] * len(list1)
+    return np.transpose([list1, list2, list_scenario, list_time]
 #%%
+# number of scenarios
+n = 1
+# attributes
+sources = edges.source.values
+targets = edges.target.values
+distance = edges.distance.values
+bearing = edges.bearing.values
+probability = edges.bearing.values
 for scenario in range(n):
-    allPreviousActivations = []
-    list_of_Activations = []
-    # edges attributes
-    sources = edges.source.values
-    targets = edges.target.values
-    distance = edges.distance.values
-    bearing = edges.bearing.values
-    probability = edges.bearing.values
+    Recordings = []
+    allActivated_sources = []
     # initial setup
     condition = True
     time = 0
@@ -93,5 +103,11 @@ for scenario in range(n):
     # ignition
     activated_sources, activated_targets = ignition(probability, rng, sources, targets)
     if activated_sources.empty:
-        condition = False
+        continue
     while condition:
+        # mask
+        activated_sources, activated_targets = valid_edges(sources, targets, bearing, distance, w_bearing_max, w_bearing_min, w_distance, activated_sources, activated_targets, allActivated_sources)
+        # store results
+        activated_array = lists_to_arrays(activated_sources,activated_targets)
+        Recordings.append(activated_array)
+        allActivated_sources.extend(activated_sources)
