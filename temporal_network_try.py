@@ -71,7 +71,8 @@ def valid_edges(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, 
         l_activated_targets = []
         for idx_s, s in enumerate(rawSources):
             t = rawTargets[idx_s]
-            for d_s, d_t in zip(act_sources, act_targets):
+            for idx_d_s, d_s in enumerate(act_sources):
+                d_t = act_targets[idx_d_s]
                 if (s == d_s) & (t == d_t):
                     if (bearing[idx_s] < d_w_bearing_max) & (bearing[idx_s] > d_w_bearing_min):
                         if distance[idx_s] < d_w_distance:
@@ -81,9 +82,9 @@ def valid_edges(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, 
         return l_activated_sources, l_activated_targets
 
 
-def lists_to_arrays(list1, list2, scenario, time):
-    list_scenario = [scenario] * len(list1)
-    list_time = [time] * len(list1)
+def lists_to_arrays(list1, list2, s=scenario, t=time):
+    list_scenario = [s] * len(list1)
+    list_time = [t] * len(list1)
     return np.transpose([list1, list2, list_scenario, list_time])
 #%%
 n = 1
@@ -105,6 +106,7 @@ for scenario in range(n):
     activated_sources, activated_targets = ignition(probability, rng, sources, targets)
     print("activated_sources: {}, activated_targets : {}". format(len(activated_sources), len(activated_targets)))
     if not activated_sources:
+        print("activated_sources empty")
         continue
     while condition:
         # mask
@@ -115,5 +117,5 @@ for scenario in range(n):
         Recordings.append(activated_array)
         allActivated_sources.extend(activated_sources)
         # propagation time + 1
-        activated_sources, activated_targets = propagation(act_targets, rawSources, rawTargets)
+        activated_sources, activated_targets = propagation(activated_targets, sources, targets)
         print("activated_sources: {}, activated_targets : {}". format(len(activated_sources), len(activated_targets)))
