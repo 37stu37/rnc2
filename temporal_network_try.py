@@ -61,8 +61,10 @@ def propagation(act_targets, rawSources, rawTargets):
     return l_newSources, l_newTargets
                 
 
-def valid_edges(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bearing_min, d_w_distance, act_sources, act_targets, d_allPreviousActivations):
-    if d_allPreviousActivations.empty:
+def valid_edges(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, d_w_bearing_min,
+                d_w_distance, act_sources, act_targets, 
+                d_allPreviousActivations):
+    if d_allPreviousActivations:
         return act_sources, act_targets
     else:
         l_activated_sources = []
@@ -82,9 +84,8 @@ def valid_edges(rawSources, rawTargets, d_bearing, d_distance, d_w_bearing_max, 
 def lists_to_arrays(list1, list2, scenario, time):
     list_scenario = [scenario] * len(list1)
     list_time = [time] * len(list1)
-    return np.transpose([list1, list2, list_scenario, list_time]
+    return np.transpose([list1, list2, list_scenario, list_time])
 #%%
-# number of scenarios
 n = 1
 # attributes
 sources = edges.source.values
@@ -102,14 +103,17 @@ for scenario in range(n):
     w_bearing_max, w_bearing_min, w_distance = wind_scenario(wind_data)
     # ignition
     activated_sources, activated_targets = ignition(probability, rng, sources, targets)
-    if activated_sources:
+    print("activated_sources: {}, activated_targets : {}". format(len(activated_sources), len(activated_targets)))
+    if not activated_sources:
         continue
     while condition:
         # mask
         activated_sources, activated_targets = valid_edges(sources, targets, bearing, distance, w_bearing_max, w_bearing_min, w_distance, activated_sources, activated_targets, allActivated_sources)
+        print("activated_sources: {}, activated_targets : {}". format(len(activated_sources), len(activated_targets)))
         # store results
         activated_array = lists_to_arrays(activated_sources,activated_targets)
         Recordings.append(activated_array)
         allActivated_sources.extend(activated_sources)
         # propagation time + 1
         activated_sources, activated_targets = propagation(act_targets, rawSources, rawTargets)
+        print("activated_sources: {}, activated_targets : {}". format(len(activated_sources), len(activated_targets)))
