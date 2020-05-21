@@ -102,7 +102,7 @@ for scenario in range(n):
     w_bearing_max, w_bearing_min, w_distance = wind_scenario(wind_data)
     # ignition
     activated_sources, activated_targets = ignition(probability, rng, sources, targets)
-    if activated_sources.empty:
+    if activated_sources:
         continue
     while condition:
         # mask
@@ -111,3 +111,5 @@ for scenario in range(n):
         activated_array = lists_to_arrays(activated_sources,activated_targets)
         Recordings.append(activated_array)
         allActivated_sources.extend(activated_sources)
+        # propagation time + 1
+        activated_sources, activated_targets = propagation(act_targets, rawSources, rawTargets)
